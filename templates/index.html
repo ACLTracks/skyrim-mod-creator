@@ -5,30 +5,89 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Skyrim AI ESL Creator</title>
     <style>
-      body { font-family: Arial, sans-serif; margin: 2rem auto; max-width: 860px; line-height: 1.4; }
+      body { font-family: Arial, sans-serif; margin: 2rem auto; max-width: 960px; line-height: 1.4; }
       textarea, input { width: 100%; padding: 0.6rem; margin-top: 0.4rem; }
       button { margin-top: 1rem; padding: 0.7rem 1rem; }
       .card { border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin-top: 1rem; }
       .error { color: #b00020; }
+      .warning { color: #8a5500; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+      table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; }
+      th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; vertical-align: top; }
       code { background: #f3f3f3; padding: 0.15rem 0.3rem; border-radius: 4px; }
     </style>
   </head>
   <body>
-    <h1>Skyrim AI ESL Creator (SE/AE)</h1>
-    <p>Describe the mod you want. The app generates an xEdit script plus an ESL artifact for your workflow.</p>
+    <h1>Skyrim Safe Mod Design Assistant (SE/AE)</h1>
+    <p>Describe the gameplay change. First review a validated plan, then generate artifacts.</p>
 
-    <form action="/create" method="post">
+    <form action="/preview" method="post">
       <label for="mod_name">Mod name</label>
       <input id="mod_name" name="mod_name" placeholder="BetterJump" required />
 
       <label for="prompt">Prompt</label>
       <textarea id="prompt" name="prompt" rows="8" placeholder="Increase jump height and carry weight a little." required></textarea>
 
-      <button type="submit">Create mod</button>
+      <button type="submit">Preview mod plan</button>
     </form>
 
     {% if error %}
       <p class="error"><strong>Error:</strong> {{ error }}</p>
+    {% endif %}
+
+    {% if preview %}
+      <div class="card">
+        <h2>Review before generation</h2>
+        <p><strong>Parsed mod title:</strong> {{ preview.mod_name }}</p>
+        <p><strong>Summary:</strong> {{ preview.summary }}</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>GMST (Catalog)</th>
+              <th>Old value</th>
+              <th>Target value</th>
+              <th>Type</th>
+              <th>Rationale</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for change in preview.changes %}
+              <tr>
+                <td><strong>{{ change.label }}</strong><br /><span class="mono">{{ change.editor_id }}</span><br /><small>Risk: {{ change.risk_tier }}</small></td>
+                <td><em>Placeholder only: resolved from your live load order when SSEEdit executes the script</em></td>
+                <td>{{ change.value }}</td>
+                <td>{{ change.value_type }}</td>
+                <td>{{ change.rationale }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        {% if preview.warnings %}
+          <h3 class="warning">Risk warnings</h3>
+          <ul>
+            {% for warning in preview.warnings %}
+              <li class="warning">{{ warning }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+
+        {% if preview.rejected_changes %}
+          <h3>Rejected changes</h3>
+          <ul>
+            {% for rejected in preview.rejected_changes %}
+              <li><strong>{{ rejected.reason }}</strong> <span class="mono">{{ rejected.requested_change }}</span></li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+
+        <form action="/create" method="post">
+          <input type="hidden" name="mod_name" value="{{ preview.mod_name }}" />
+          <input type="hidden" name="spec_payload" value="{{ preview.spec_payload }}" />
+          <button type="submit">Generate artifacts</button>
+        </form>
+      </div>
     {% endif %}
 
     {% if result %}
@@ -37,14 +96,30 @@
         <p><strong>Summary:</strong> {{ result.summary }}</p>
         <p><strong>ESL:</strong> <code>{{ result.plugin }}</code></p>
         <p><strong>xEdit Script:</strong> <code>{{ result.script }}</code></p>
+        <p><strong>Manifest:</strong> <code>{{ result.manifest }}</code></p>
         <p>
           <a href="/download/{{ result.folder }}/{{ result.download_name }}">Download ESL</a>
           |
           <a href="/download-script/{{ result.folder }}/{{ result.script.split('/')[-1] }}">Download xEdit script</a>
+          |
+          <a href="/download/{{ result.folder }}/{{ result.download_manifest_name }}">Download manifest</a>
         </p>
-        <p>
-          <em>Note:</em> For a production-ready ESL, run the generated script in SSEEdit 4.x with Skyrim SE/AE.
-        </p>
+
+        <h3>Post-build verification hooks (read carefully)</h3>
+        <ul>
+          {% for item in result.verification %}
+            <li><strong>{{ item.status|upper }}</strong>: {{ item.check }} — {{ item.message }}</li>
+          {% endfor %}
+        </ul>
+
+        {% if result.rejected_changes %}
+          <h3>Skipped unsupported edits</h3>
+          <ul>
+            {% for rejected in result.rejected_changes %}
+              <li>{{ rejected.reason }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
       </div>
     {% endif %}
   </body>
