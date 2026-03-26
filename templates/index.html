@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Skyrim AI ESL Creator</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 2rem auto; max-width: 860px; line-height: 1.4; }
+      textarea, input { width: 100%; padding: 0.6rem; margin-top: 0.4rem; }
+      button { margin-top: 1rem; padding: 0.7rem 1rem; }
+      .card { border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin-top: 1rem; }
+      .error { color: #b00020; }
+      code { background: #f3f3f3; padding: 0.15rem 0.3rem; border-radius: 4px; }
+    </style>
+  </head>
+  <body>
+    <h1>Skyrim AI ESL Creator (SE/AE)</h1>
+    <p>Describe the mod you want. The app generates an xEdit script plus an ESL artifact for your workflow.</p>
+
+    <form action="/create" method="post">
+      <label for="mod_name">Mod name</label>
+      <input id="mod_name" name="mod_name" placeholder="BetterJump" required />
+
+      <label for="prompt">Prompt</label>
+      <textarea id="prompt" name="prompt" rows="8" placeholder="Increase jump height and carry weight a little." required></textarea>
+
+      <button type="submit">Create mod</button>
+    </form>
+
+    {% if error %}
+      <p class="error"><strong>Error:</strong> {{ error }}</p>
+    {% endif %}
+
+    {% if result %}
+      <div class="card">
+        <h2>Generated</h2>
+        <p><strong>Summary:</strong> {{ result.summary }}</p>
+        <p><strong>ESL:</strong> <code>{{ result.plugin }}</code></p>
+        <p><strong>xEdit Script:</strong> <code>{{ result.script }}</code></p>
+        <p>
+          <a href="/download/{{ result.folder }}/{{ result.download_name }}">Download ESL</a>
+          |
+          <a href="/download-script/{{ result.folder }}/{{ result.script.split('/')[-1] }}">Download xEdit script</a>
+        </p>
+        <p>
+          <em>Note:</em> For a production-ready ESL, run the generated script in SSEEdit 4.x with Skyrim SE/AE.
+        </p>
+      </div>
+    {% endif %}
+  </body>
+</html>
